@@ -294,7 +294,7 @@ void q_sort(struct list_head *head, bool descend)
         element_t *entry, *safe;
         safe = NULL;
         list_for_each_entry_safe (entry, safe, &tmp, list) {
-            if (strcmp(entry->value, greatest->value) > 0) {
+            if (strcmp(entry->value, greatest->value) >= 0) {
                 greatest = entry;
             }
         }
@@ -315,19 +315,91 @@ void q_sort(struct list_head *head, bool descend)
 int q_ascend(struct list_head *head)
 {
     // https://leetcode.com/problems/remove-nodes-from-linked-list/
-    return 0;
+    if (!head || list_empty(head))
+        return 0;
+    if (list_is_singular(head))
+        return 1;
+
+    struct list_head copy;
+    INIT_LIST_HEAD(&copy);
+
+    list_splice_init(head, &copy);
+
+    element_t *entry, *safe;
+    safe = NULL;
+    list_for_each_entry_safe (entry, safe, &copy, list) {
+        bool should_keep = true;
+
+        for (struct list_head *j = entry->list.next; j != &copy; j = j->next) {
+            if (strcmp(list_entry(j, element_t, list)->value, entry->value) <
+                0) {
+                should_keep = false;
+                break;
+            }
+        }
+
+        if (should_keep) {
+            list_del(&entry->list);
+            list_add_tail(&entry->list, head);
+        }
+    }
+
+    q_free(&copy);
+
+    int len = 0;
+    struct list_head *n;
+    list_for_each (n, head)
+        len++;
+
+    return len;
 }
 
-/* Remove every node which has a node with a strictly greater value anywhere to
- * the right side of it */
+/* Remove every node which has a node with a strictly greater value anywhere
+ * to the right side of it */
 int q_descend(struct list_head *head)
 {
     // https://leetcode.com/problems/remove-nodes-from-linked-list/
-    return 0;
+    if (!head || list_empty(head))
+        return 0;
+    if (list_is_singular(head))
+        return 1;
+
+    struct list_head copy;
+    INIT_LIST_HEAD(&copy);
+
+    list_splice_init(head, &copy);
+
+    element_t *entry, *safe;
+    safe = NULL;
+    list_for_each_entry_safe (entry, safe, &copy, list) {
+        bool should_keep = true;
+
+        for (struct list_head *j = entry->list.next; j != &copy; j = j->next) {
+            if (strcmp(list_entry(j, element_t, list)->value, entry->value) >
+                0) {
+                should_keep = false;
+                break;
+            }
+        }
+
+        if (should_keep) {
+            list_del(&entry->list);
+            list_add_tail(&entry->list, head);
+        }
+    }
+
+    q_free(&copy);
+
+    int len = 0;
+    struct list_head *n;
+    list_for_each (n, head)
+        len++;
+
+    return len;
 }
 
-/* Merge all the queues into one sorted queue, which is in ascending/descending
- * order */
+/* Merge all the queues into one sorted queue, which is in
+ * ascending/descending order */
 int q_merge(struct list_head *head, bool descend)
 {
     // https://leetcode.com/problems/merge-k-sorted-lists/
