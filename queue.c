@@ -25,8 +25,7 @@ void q_free(struct list_head *head)
     list_for_each_safe (li, tmp, head) {
         element_t *el = list_entry(li, element_t, list);
         list_del_init(&el->list);
-        free(el->value);
-        free(el);
+        q_release_element(el);
     }
 
     free(head);
@@ -87,7 +86,7 @@ element_t *q_remove_head(struct list_head *head, char *sp, size_t bufsize)
         return NULL;
 
     element_t *h = list_first_entry(head, element_t, list);
-    list_del(&h->list);
+    list_del_init(&h->list);
 
     strncpy(sp, h->value, bufsize);
     return h;
@@ -103,7 +102,7 @@ element_t *q_remove_tail(struct list_head *head, char *sp, size_t bufsize)
         return NULL;
 
     element_t *t = list_last_entry(head, element_t, list);
-    list_del(&t->list);
+    list_del_init(&t->list);
 
     strncpy(sp, t->value, bufsize);
     return t;
@@ -147,8 +146,7 @@ bool q_delete_mid(struct list_head *head)
 
     list_del_init(mid);
     element_t *e = list_entry(mid, element_t, list);
-    free(e->value);
-    free(e);
+    q_release_element(e);
     return true;
 }
 
@@ -184,8 +182,7 @@ bool q_delete_dup(struct list_head *head)
     list_for_each_safe (n, sn, &tmp) {
         list_del_init(n);
         element_t *d = list_entry(n, element_t, list);
-        free(d->value);
-        free(d);
+        q_release_element(d);
     }
 
     return true;
@@ -344,8 +341,6 @@ int q_ascend(struct list_head *head)
         }
     }
 
-    q_free(&copy);
-
     int len = 0;
     struct list_head *n;
     list_for_each (n, head)
@@ -388,8 +383,6 @@ int q_descend(struct list_head *head)
         }
     }
 
-    q_free(&copy);
-
     int len = 0;
     struct list_head *n;
     list_for_each (n, head)
@@ -403,5 +396,25 @@ int q_descend(struct list_head *head)
 int q_merge(struct list_head *head, bool descend)
 {
     // https://leetcode.com/problems/merge-k-sorted-lists/
-    return 0;
+    if (!head || list_empty(head))
+        return 0;
+
+    if (list_is_singular(head)) {
+        return 1;
+    }
+
+    queue_contex_t *first = list_first_entry(head, queue_contex_t, chain);
+
+    queue_contex_t *entry, *safe = NULL;
+    list_for_each_entry_safe (entry, safe, head, chain) {
+        if (entry != first) {
+            list_splice_init(entry->q, first->q);
+            first->size += entry->size;
+            entry->size = 0;
+        }
+    }
+
+    q_sort(first->q, descend);
+
+    return first->size;
 }
