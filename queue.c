@@ -127,6 +127,28 @@ int q_size(struct list_head *head)
 bool q_delete_mid(struct list_head *head)
 {
     // https://leetcode.com/problems/delete-the-middle-node-of-a-linked-list/
+    if (!head || list_empty(head))
+        return false;
+
+    struct list_head *mid;
+    if (list_is_singular(head)) {
+        mid = head->next;
+    } else {
+        struct list_head *slow = head->next;
+        struct list_head *fast = head->next;
+
+        while (fast != head && fast->next != head) {
+            fast = fast->next->next;
+            slow = slow->next;
+        }
+
+        mid = slow;
+    }
+
+    list_del_init(mid);
+    element_t *e = list_entry(mid, element_t, list);
+    free(e->value);
+    free(e);
     return true;
 }
 
@@ -144,7 +166,22 @@ void q_swap(struct list_head *head)
 }
 
 /* Reverse elements in queue */
-void q_reverse(struct list_head *head) {}
+void q_reverse(struct list_head *head)
+{
+    if (!head || list_empty(head) || list_is_singular(head))
+        return;
+
+    struct list_head tmp;
+    INIT_LIST_HEAD(&tmp);
+
+    list_splice_init(head, &tmp);
+
+    struct list_head *node, *safe;
+    list_for_each_safe (node, safe, &tmp) {
+        list_del(node);
+        list_add(node, head);
+    }
+}
 
 /* Reverse the nodes of the list k at a time */
 void q_reverseK(struct list_head *head, int k)
@@ -153,7 +190,37 @@ void q_reverseK(struct list_head *head, int k)
 }
 
 /* Sort elements of queue in ascending/descending order */
-void q_sort(struct list_head *head, bool descend) {}
+void q_sort(struct list_head *head, bool descend)
+{
+    if (!head || list_empty(head) || list_is_singular(head))
+        return;
+
+    struct list_head tmp;
+    INIT_LIST_HEAD(&tmp);
+
+    list_splice_init(head, &tmp);
+
+    while (!list_empty(&tmp)) {
+        element_t *greatest = list_entry(tmp.next, element_t, list);
+
+        element_t *entry, *safe;
+        safe = NULL;
+        list_for_each_entry_safe (entry, safe, &tmp, list) {
+            if (strcmp(entry->value, greatest->value) > 0) {
+                greatest = entry;
+            }
+        }
+
+        list_del(&greatest->list);
+        list_add(&greatest->list, head);
+    }
+
+    if (descend) {
+        q_reverse(head);
+    }
+
+    return;
+}
 
 /* Remove every node which has a node with a strictly less value anywhere to
  * the right side of it */
