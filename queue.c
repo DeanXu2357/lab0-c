@@ -282,39 +282,80 @@ void q_sort(struct list_head *head, bool descend)
     if (!head || list_empty(head) || list_is_singular(head))
         return;
 
-    int length = q_size(head);
+    int total_size = q_size(head);
 
-    for (int i = 0; i < length - 1; i++) {
-        bool swapped = false;
-        struct list_head *current = head->next;
+    for (int width = 1; width < total_size; width *= 2) {
+        struct list_head result;
+        INIT_LIST_HEAD(&result);
 
-        for (int j = 0; j < length - 1 - i; j++) {
-            struct list_head *next = current->next;
+        struct list_head temp;
+        INIT_LIST_HEAD(&temp);
+        list_splice_init(head, &temp);
 
-            const element_t *curr_elem = list_entry(current, element_t, list);
-            const element_t *next_elem = list_entry(next, element_t, list);
+        while (!list_empty(&temp)) {
+            struct list_head left;
+            INIT_LIST_HEAD(&left);
+            for (int i = 0; i < width && !list_empty(&temp); i++) {
+                struct list_head *node = temp.next;
+                list_del(node);
+                list_add_tail(node, &left);
+            }
 
-            if (!curr_elem->value || !next_elem->value) {
-                current = next;
+            if (list_empty(&temp)) {
+                list_splice_tail(&left, &result);
                 continue;
             }
 
-            bool should_swap =
-                descend ? (strcmp(curr_elem->value, next_elem->value) < 0)
-                        : (strcmp(curr_elem->value, next_elem->value) > 0);
-
-            if (should_swap) {
-                list_del(current);
-                list_add(current, next);
-                swapped = true;
-                continue;
+            struct list_head right;
+            INIT_LIST_HEAD(&right);
+            for (int i = 0; i < width && !list_empty(&temp); i++) {
+                struct list_head *node = temp.next;
+                list_del(node);
+                list_add_tail(node, &right);
             }
 
-            current = next;
+            while (!list_empty(&left) && !list_empty(&right)) {
+                struct list_head *left_node = left.next;
+                struct list_head *right_node = right.next;
+
+                const element_t *left_elem =
+                    list_entry(left_node, element_t, list);
+                const element_t *right_elem =
+                    list_entry(right_node, element_t, list);
+
+                if (!left_elem->value || !right_elem->value) {
+                    if (!left_elem->value) {
+                        list_del(left_node);
+                        list_add_tail(left_node, &result);
+                    } else {
+                        list_del(right_node);
+                        list_add_tail(right_node, &result);
+                    }
+                    continue;
+                }
+
+                bool pick_left =
+                    descend
+                        ? (strcmp(left_elem->value, right_elem->value) >= 0)
+                        : (strcmp(left_elem->value, right_elem->value) <= 0);
+
+                if (pick_left) {
+                    list_del(left_node);
+                    list_add_tail(left_node, &result);
+                } else {
+                    list_del(right_node);
+                    list_add_tail(right_node, &result);
+                }
+            }
+
+            if (!list_empty(&left))
+                list_splice_tail(&left, &result);
+
+            if (!list_empty(&right))
+                list_splice_tail(&right, &result);
         }
 
-        if (!swapped)
-            break;
+        list_splice(&result, head);
     }
 }
 
