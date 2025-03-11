@@ -341,6 +341,9 @@ int q_ascend(struct list_head *head)
         }
     }
 
+    list_for_each_entry_safe (entry, safe, &copy, list)
+        q_release_element(entry);
+
     int len = 0;
     struct list_head *n;
     list_for_each (n, head)
@@ -382,6 +385,9 @@ int q_descend(struct list_head *head)
             list_add_tail(&entry->list, head);
         }
     }
+
+    list_for_each_entry_safe (entry, safe, &copy, list)
+        q_release_element(entry);
 
     int len = 0;
     struct list_head *n;
