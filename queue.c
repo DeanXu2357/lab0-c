@@ -280,31 +280,40 @@ void q_sort(struct list_head *head, bool descend)
     if (!head || list_empty(head) || list_is_singular(head))
         return;
 
-    struct list_head tmp;
-    INIT_LIST_HEAD(&tmp);
+    int length = q_size(head);
 
-    list_splice_init(head, &tmp);
+    for (int i = 0; i < length - 1; i++) {
+        bool swapped = false;
+        struct list_head *current = head->next;
 
-    while (!list_empty(&tmp)) {
-        element_t *greatest = list_entry(tmp.next, element_t, list);
+        for (int j = 0; j < length - 1 - i; j++) {
+            struct list_head *next = current->next;
 
-        element_t *entry, *safe;
-        safe = NULL;
-        list_for_each_entry_safe (entry, safe, &tmp, list) {
-            if (strcmp(entry->value, greatest->value) >= 0) {
-                greatest = entry;
+            const element_t *curr_elem = list_entry(current, element_t, list);
+            const element_t *next_elem = list_entry(next, element_t, list);
+
+            if (!curr_elem->value || !next_elem->value) {
+                current = next;
+                continue;
             }
+
+            bool should_swap =
+                descend ? (strcmp(curr_elem->value, next_elem->value) < 0)
+                        : (strcmp(curr_elem->value, next_elem->value) > 0);
+
+            if (should_swap) {
+                list_del(current);
+                list_add(current, next);
+                swapped = true;
+                continue;
+            }
+
+            current = next;
         }
 
-        list_del(&greatest->list);
-        list_add(&greatest->list, head);
+        if (!swapped)
+            break;
     }
-
-    if (descend) {
-        q_reverse(head);
-    }
-
-    return;
 }
 
 /* Remove every node which has a node with a strictly less value anywhere to
